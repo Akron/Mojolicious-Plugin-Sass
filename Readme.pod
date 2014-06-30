@@ -4,6 +4,7 @@
 
 Mojolicious::Plugin::Sass - Use C<Sass> in your Mojolicious templates
 
+B<This plugin isn't maintained. Please use L<Mojolicious::Plugin::AssetPack> for Sass processing instead!>
 
 =head1 SYNOPSIS
 
@@ -33,26 +34,7 @@ Called when registering the plugin.
 
 =head2 C<sass>
 
-Converts a Sass stylesheet to CSS on the fly.
-
-
-=head2 C<scss>
-
-Converts an Scss stylesheet to CSS on the fly.
-
-
-=head2 C<sassc>
-
-Converts a Sass stylesheet to a compressed CSS on the fly.
-
-B<This handler is EXPERIMENTAL and may change without warnings.>
-
-
-=head2 C<scssc>
-
-Converts an Scss stylesheet to a compressed CSS on the fly.
-
-B<This handler is EXPERIMENTAL and may change without warnings.>
+Converts a Sass stylesheet (as SCSS) to CSS on the fly.
 
 
 =head1 HELPERS
@@ -72,19 +54,16 @@ B<This handler is EXPERIMENTAL and may change without warnings.>
     }
   % end
 
-Renders Sass stylesheet code inline.
+Renders Sass stylesheet (SCSS) code inline.
 
 Optional parameters include C<compress =E<gt> "1"|"0">
-(the default is C<0>) and C<type =E<gt> "sass"|"scss"> (the default is C<scss>).
-
-B<This helper is EXPERIMENTAL and may change without warnings.>
+(the default is C<0>).
 
 
 =head1 DEPENDENCIES
 
 L<Mojolicious>,
-L<Text::Sass>,
-L<CSS::Compressor>.
+L<Text::Sass::XS>.
 
 
 =head1 SEE ALSO
@@ -92,12 +71,7 @@ L<CSS::Compressor>.
 The functionality of this plugin is similar to
 L<Mojolicious::Plugin::SassRenderer>, but supports template caching,
 C<DATA> templates, stylesheet helpers, and compression.
-
-
-=head1 BUGS
-
-As this plugin uses L<Text::Sass> and L<CSS::Compressor>,
-it has their limitations.
+It only supports SCSS.
 
 
 =head1 AVAILABILITY
@@ -107,7 +81,7 @@ it has their limitations.
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2012, Nils Diewald.
+Copyright (C) 2012-2013, Nils Diewald.
 
 This program is free software, you can redistribute it
 and/or modify it under the same terms as Perl.

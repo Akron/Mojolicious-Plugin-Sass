@@ -1,85 +1,58 @@
 package Mojolicious::Plugin::Sass;
 use Mojo::Base 'Mojolicious::Plugin';
 use Mojo::ByteStream 'b';
-use Text::Sass;
-# use CSS::Sass;
-use CSS::Compressor 'css_compress';
+use Text::Sass::XS ':const';
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
+
+our $COMPRESS = {
+  output_style    => SASS_STYLE_COMPRESSED,
+  source_comments => SASS_SOURCE_COMMENTS_NONE
+};
 
 # Register Plugin
 sub register {
   my ($plugin, $mojo) = @_;
 
   # Sass converter object
-  my $text_sass = Text::Sass->new;
-
-  # Subroutine for sass and scss handlers
-  my $handler_sub = sub {
-    my ($type, $compress, $r, $c, $output, $options) = @_;
-
-    # Get styles from cache
-    my ($cache_result, $path) = _get_from_cache($r, $options);
-
-    # Set cache as output
-    if ($cache_result) {
-      $$output = $cache_result;
-      return 1;
-    };
-
-    # Get data
-    my $sass =
-      $options->{inline} ? $path : _get_data($r, $c, $path, $options);
-
-    # No data found
-    return unless $sass;
-
-    # Convert sass to css
-    my $css;
-    if ($type eq 'sass') {
-      $css = $text_sass->sass2css($sass);
-    }
-
-    # Convert scss to css
-    else {
-      $css = $text_sass->scss2css($sass);
-    };
-
-    # Compress
-    $$output = $compress ? css_compress($css) : $css;
-
-    # Set styles to cache
-    $r->cache->set($options->{cache} => $$output);
-
-    return 1;
-  };
-
-  my $renderer = $mojo->renderer;
+  my $text_sass = Text::Sass::XS->new;
 
   # Add 'sass' handler
-  $renderer->add_handler(
+  $mojo->renderer->add_handler(
     sass => sub {
-      $handler_sub->(sass => 0 => @_ );
+      my ($r, $c, $output, $options) = @_;
+
+      # Get styles from cache
+      my ($cache_result, $path) = _get_from_cache($r, $options);
+
+      # Set cache as output
+      if ($cache_result) {
+	$$output = $cache_result;
+	return 1;
+      };
+
+      # Get data
+      my $sass =
+	$options->{inline} ? $path : _get_data($r, $c, $path, $options);
+
+      # No data found
+      return unless $sass;
+
+      # Convert sass to css
+      my $css = $text_sass->compile(
+	$sass, $options->{compress} ? $COMPRESS : {}
+      );
+
+      # Set styles to cache
+      $r->cache->set($options->{cache} => $css);
+
+      $$output = $css;
+
+      return 1;
     });
 
-  # Add 'scss' handler
-  $renderer->add_handler(
-    scss => sub {
-      $handler_sub->(scss => 0 => @_ );
-    });
 
-  # Add 'sassc' handler
-  $renderer->add_handler(
-    sassc => sub {
-      $handler_sub->(sass => 1 => @_ );
-    });
-
-  # Add 'scssc' handler
-  $renderer->add_handler(
-    scssc => sub {
-      $handler_sub->(scss => 1 => @_ );
-    });
-
+  # Stylesheet helper
   $mojo->helper(
     sass_stylesheet => sub {
       my $c = shift;
@@ -89,22 +62,10 @@ sub register {
       return unless ref $style eq 'CODE';
 
       my %param = @_;
-      my $type = delete $param{type} || 'scss';
       my $compress = delete $param{compress} || 0;
 
       # Convert sass to css
-      my $css;
-      if ($type eq 'sass') {
-	$css = $text_sass->sass2css($style->());
-      }
-
-      # Convert scss to css
-      else {
-	$css = $text_sass->scss2css($style->());
-      };
-
-      # Compress CSS
-      $css = css_compress($css) if $compress;
+      my $css = $text_sass->compile($style->(), $compress ? $COMPRESS : {});
 
       # Surround content with CDATA
       my $cb = sub { "/*<![CDATA[*/\n" . $css . "\n/*]]>*/" };
@@ -177,6 +138,7 @@ __END__
 
 Mojolicious::Plugin::Sass - Use C<Sass> in your Mojolicious templates
 
+B<This plugin isn't maintained. Please use L<Mojolicious::Plugin::AssetPack> for Sass processing instead!>
 
 =head1 SYNOPSIS
 
@@ -206,26 +168,7 @@ Called when registering the plugin.
 
 =head2 C<sass>
 
-Converts a Sass stylesheet to CSS on the fly.
-
-
-=head2 C<scss>
-
-Converts an Scss stylesheet to CSS on the fly.
-
-
-=head2 C<sassc>
-
-Converts a Sass stylesheet to a compressed CSS on the fly.
-
-B<This handler is EXPERIMENTAL and may change without warnings.>
-
-
-=head2 C<scssc>
-
-Converts an Scss stylesheet to a compressed CSS on the fly.
-
-B<This handler is EXPERIMENTAL and may change without warnings.>
+Converts a Sass stylesheet (as SCSS) to CSS on the fly.
 
 
 =head1 HELPERS
@@ -245,19 +188,16 @@ B<This handler is EXPERIMENTAL and may change without warnings.>
     }
   % end
 
-Renders Sass stylesheet code inline.
+Renders Sass stylesheet (SCSS) code inline.
 
 Optional parameters include C<compress =E<gt> "1"|"0">
-(the default is C<0>) and C<type =E<gt> "sass"|"scss"> (the default is C<scss>).
-
-B<This helper is EXPERIMENTAL and may change without warnings.>
+(the default is C<0>).
 
 
 =head1 DEPENDENCIES
 
 L<Mojolicious>,
-L<Text::Sass>,
-L<CSS::Compressor>.
+L<Text::Sass::XS>.
 
 
 =head1 SEE ALSO
@@ -265,12 +205,7 @@ L<CSS::Compressor>.
 The functionality of this plugin is similar to
 L<Mojolicious::Plugin::SassRenderer>, but supports template caching,
 C<DATA> templates, stylesheet helpers, and compression.
-
-
-=head1 BUGS
-
-As this plugin uses L<Text::Sass> and L<CSS::Compressor>,
-it has their limitations.
+It only supports SCSS.
 
 
 =head1 AVAILABILITY
@@ -280,7 +215,7 @@ it has their limitations.
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2012, Nils Diewald.
+Copyright (C) 2012-2013, Nils Diewald.
 
 This program is free software, you can redistribute it
 and/or modify it under the same terms as Perl.

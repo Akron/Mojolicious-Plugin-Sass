@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 use Test::Mojo;
-use Test::More tests => 8;
+use Test::More;
 use Mojolicious::Lite;
 $|++;
 use lib ('../lib', '../../lib');
@@ -30,46 +30,22 @@ like($c->sass_stylesheet(sub { $scss }), qr/p a /, 'scss stylesheet' );
 unlike($c->sass_stylesheet(compress => 1, sub { $scss }),
        qr/\s\s/, 'scss stylesheet (compressed)' );
 
-like($c->render_partial(
+like($c->render_to_string(
   inline => $scss,
   format => 'css',
-  handler => 'scss'
+  handler => 'sass'
 ), qr/p a /, 'scss handler');
 
 
-unlike($c->render_partial(
+unlike($c->render_to_string(
+  partial => 1,
   inline => $scss,
   format => 'css',
-  handler => 'scssc'
+  handler => 'sass',
+  compress => 1
 ), qr/\s\s/, 'scssc handler');
 
 
-my $sass = << 'SASS';
-p
- color: black
- a
-  color: red
-p
- font-size: 12pt
-SASS
-
-like($c->sass_stylesheet(type => 'sass', sub { $sass }), qr/p a /, 'sass stylesheet' );
-unlike($c->sass_stylesheet(compress => 1, type => 'sass', sub { $sass }),
-       qr/\s\s/, 'sass stylesheet (compressed)' );
-
-like($c->render_partial(
-  inline => $sass,
-  format => 'css',
-  handler => 'sass'
-), qr/p a /, 'sass handler');
-
-
-unlike($c->render_partial(
-  inline => $sass,
-  format => 'css',
-  handler => 'sassc'
-), qr/\s\s/, 'sassc handler');
-
-
+done_testing;
 
 __END__
